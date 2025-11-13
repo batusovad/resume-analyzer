@@ -14,16 +14,16 @@ jobs:
       - name: Setup Yandex Cloud CLI
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
+          echo "C:\Users\Даша/yandex-cloud/bin" >> 
 
       - name: Configure YC CLI
         env:
           SA_KEY: ${{ secrets.YC_SA_KEY }}
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
         run: |
-          echo "$SA_KEY" > key.json
+          echo "" > key.json
           yc config set service-account-key key.json
-          yc config set folder-id "$FOLDER_ID"
+          yc config set folder-id ""
 
       - name: Login to Container Registry
         run: yc container registry configure-docker
@@ -48,12 +48,13 @@ jobs:
         env:
           REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
           SHA: ${{ github.sha }}
-          FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
         run: |
-          yc compute ssh --name resume-app-vm --command "bash -s" <<EOF
-            cd /home/ubuntu/app || mkdir -p /home/ubuntu/app && cd /home/ubuntu/app
-            git clone https://github.com/batusovad/resume-analyzer.git . || git pull origin main
-            docker pull cr.yandex/${REGISTRY_ID}/resume-backend:${SHA}
-            docker pull cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}
-            docker compose up -d
-          EOF
+          cat > deploy.sh <<'SCRIPT'
+#!/bin/bash
+cd /home/ubuntu/app
+git pull origin main
+docker pull cr.yandex/${REGISTRY_ID}/resume-backend:${SHA}
+docker pull cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}
+docker compose up -d
+SCRIPT
+          yc compute ssh --name resume-app-vm --ssh-key key.json -- bash -s < deploy.sh
