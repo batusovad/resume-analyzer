@@ -14,16 +14,16 @@ jobs:
       - name: Setup Yandex Cloud CLI
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          echo "C:\Users\Даша/yandex-cloud/bin" >> 
+          echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
 
       - name: Configure YC CLI
         env:
           SA_KEY: ${{ secrets.YC_SA_KEY }}
           FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
         run: |
-          echo "" > key.json
+          echo "$SA_KEY" > key.json
           yc config set service-account-key key.json
-          yc config set folder-id ""
+          yc config set folder-id "$FOLDER_ID"
 
       - name: Login to Container Registry
         run: yc container registry configure-docker
@@ -48,13 +48,16 @@ jobs:
         env:
           REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
           SHA: ${{ github.sha }}
+          VM_IP: "158.160.41.253"
         run: |
           cat > deploy.sh <<'SCRIPT'
-#!/bin/bash
-cd /home/ubuntu/app
-git pull origin main
-docker pull cr.yandex/${REGISTRY_ID}/resume-backend:${SHA}
-docker pull cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}
-docker compose up -d
-SCRIPT
-          yc compute ssh --name resume-app-vm --ssh-key key.json -- bash -s < deploy.sh
+          #!/bin/bash
+          set -e
+          cd /home/ubuntu/app
+          git pull origin main
+          docker pull cr.yandex/${REGISTRY_ID}/resume-backend:${SHA}
+          docker pull cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}
+          docker compose up -d
+          SCRIPT
+          chmod +x deploy.sh
+          yc compute ssh --name resume-app-vm --ssh-key key.json --command "bash -s" < deploy.sh
