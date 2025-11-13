@@ -1,0 +1,43 @@
+﻿name: Deploy to Yandex Cloud
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  YC_FOLDER_ID: ${{ secrets.YC_FOLDER_ID }}
+  YC_SA_KEY: ${{ secrets.YC_SA_KEY }}
+  YC_REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          echo '${HOME}/yandex-cloud/bin' >> 
+
+      - name: Build and push backend
+        run: |
+          yc config set service-account-key '${{ secrets.YC_SA_KEY }}'
+          docker build -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-backend:${{ github.sha }} ./backend
+          docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-backend:${{ github.sha }}
+
+      - name: Build and push frontend
+        run: |
+          docker build -t cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-frontend:${{ github.sha }} ./frontend
+          docker push cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-frontend:${{ github.sha }}
+
+      - name: Deploy to VM
+        run: |
+          yc compute ssh --name resume-app-vm --ssh-key '${{ secrets.YC_SA_KEY }}' --command "
+            cd /home/ubuntu/app &&
+            git pull origin main &&
+            docker pull cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-backend:${{ github.sha }} &&
+            docker pull cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-frontend:${{ github.sha }} &&
+            docker compose up -d
+          "
