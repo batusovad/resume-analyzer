@@ -1,1 +1,32 @@
-﻿services:  db:    image: postgres:15-alpine    environment:      POSTGRES_USER: resume_user      POSTGRES_PASSWORD: password123      POSTGRES_DB: resume_analyzer    ports:      - "5432:5432"    volumes:      - postgres_data:/var/lib/postgresql/data  backend:    build: ./backend    ports:      - "5000:5000"    environment:      DATABASE_URL: postgresql://resume_user:password123@db:5432/resume_analyzer    depends_on:      - db    volumes:      - ./backend:/app  frontend:    build: ./frontend    ports:      - "3000:80"    depends_on:      - backendvolumes:  postgres_data:
+﻿services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: resume_user
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: resume_analyzer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://resume_user:password123@db:5432/resume_analyzer
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
