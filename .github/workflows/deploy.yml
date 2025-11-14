@@ -45,18 +45,16 @@ jobs:
           docker push cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}
 
       - name: Deploy to VM
-        env:
-          REGISTRY_ID: ${{ secrets.YC_REGISTRY_ID }}
-          SHA: ${{ github.sha }}
-        run: |
-          cat > deploy.sh <<'SCRIPT'
-          #!/bin/bash
-          set -e
-          cd /home/ubuntu/app || { mkdir -p /home/ubuntu/app && cd /home/ubuntu/app; }
-          git pull origin main || git clone https://github.com/batusovad/resume-analyzer.git .
-          docker pull cr.yandex/${REGISTRY_ID}/resume-backend:${SHA}
-          docker pull cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}
-          docker compose up -d
-          SCRIPT
-          chmod +x deploy.sh
-          yc compute ssh resume-app-vm --command "bash deploy.sh"
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/app || { mkdir -p /home/ubuntu/app && cd /home/ubuntu/app; }
+            git pull origin main || git clone https://github.com/batusovad/resume-analyzer.git .
+            docker pull cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-backend:${{ github.sha }}
+            docker pull cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-frontend:${{ github.sha }}
+            docker tag cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-backend:${{ github.sha }} cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-backend:latest
+            docker tag cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-frontend:${{ github.sha }} cr.yandex/${{ secrets.YC_REGISTRY_ID }}/resume-frontend:latest
+            docker compose up -d
