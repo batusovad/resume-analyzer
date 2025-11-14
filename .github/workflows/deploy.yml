@@ -42,7 +42,7 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           docker build -t cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA} ./frontend
-          docker push cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}
+          docker push cr.yandex/${REGISTRY_ID}/resume-frontend:${SHA}}
 
       - name: Deploy to VM
         env:
@@ -59,4 +59,4 @@ jobs:
           docker compose up -d
           SCRIPT
           chmod +x deploy.sh
-          yc compute ssh resume-app-vm --command "bash deploy.sh"
+          yc compute ssh resume-app-vm -- bash deploy.sh
